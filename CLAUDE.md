@@ -121,7 +121,7 @@ Key files:
 - psutil (process management)
 - click (CLI)
 - systemd (for systemd-run command)
-- swaybg (Wayland wallpaper daemon)
+- **swww** (recommended) OR swaybg (Wayland wallpaper daemon)
 
 **Dev**:
 - pytest, pytest-cov, pytest-mock
@@ -129,10 +129,28 @@ Key files:
 
 ## Installation
 
+### Install chrono-wallpaper
+
 ```bash
 cd ~/git/chrono-wallpaper
 pip install -e . --break-system-packages
 ./systemd/install.sh
+```
+
+### Install swww (recommended)
+
+swww provides smooth fade transitions with no black flash.
+
+```bash
+# Install dependencies
+sudo apt install libwayland-dev wayland-protocols pkg-config liblz4-dev
+
+# Install Rust and build swww
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
+cd ~/git && git clone https://github.com/LGFae/swww.git
+cd swww && ~/.cargo/bin/cargo build --release
+cp target/release/swww* ~/.local/bin/
 ```
 
 ## Configuration
@@ -181,11 +199,18 @@ All 12 tests should pass:
 
 Add to `~/.config/hypr/hyprland.conf`:
 
+**With swww (recommended)**:
+```bash
+exec-once = swww-daemon
+exec-once = sleep 1 && chrono-wallpaper run
+```
+
+**With swaybg**:
 ```bash
 exec-once = chrono-wallpaper run
 ```
 
-This sets the initial wallpaper on login. The systemd timer handles updates during transitions.
+The systemd timer handles updates during transitions.
 
 ## Migration from Old System
 
@@ -204,9 +229,15 @@ Potential enhancements:
 2. CLI commands: `status`, `config`, `install`
 3. Multiple wallpaper sets (different profiles)
 4. Configurable transition times
-5. Support for other compositors (swww, hyprpaper)
+5. hyprpaper support
 
 ## Version History
+
+**v1.1.0** (2025-12-29):
+- Added swww support for smooth fade transitions
+- Auto-detects swww-daemon and uses it when available
+- Completely eliminates black flash with swww
+- Falls back to swaybg if swww not running
 
 **v1.0.1** (2025-12-29):
 - Fixed black flash during wallpaper updates
