@@ -1,0 +1,16 @@
+[Unit]
+Description=Chrono-Wallpaper timer for smooth transitions
+After=graphical-session.target
+
+[Timer]
+# Morning transition (6-7 AM) every minute
+OnCalendar=*-*-* 06:*:00
+# Evening transition (10 PM - midnight) every minute
+OnCalendar=*-*-* 22:*:00
+OnCalendar=*-*-* 23:*:00
+# Accuracy: trigger within 1 second
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

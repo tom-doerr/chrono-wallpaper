@@ -1,0 +1,12 @@
+[Unit]
+Description=Chrono-Wallpaper: Time-based wallpaper transitions
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/chrono-wallpaper run
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
