@@ -23,14 +23,10 @@ class CompositorManager:
     def set_wallpaper(self, image_path: Path, mode: str = "fill") -> bool:
         """Set wallpaper and ensure compositor is running."""
         try:
-            # 1. Kill existing compositor
-            self._kill_existing()
+            # 1. Get existing PIDs
+            old_pids = self._get_existing_pids()
 
-            # 2. Wait for termination
-            if not self._wait_for_termination(timeout=2.0):
-                logger.warning("Compositor did not terminate cleanly")
-
-            # 3. Start new compositor using systemd-run for proper isolation
+            # 2. Start new compositor first (prevents black flash)
             compositor_cmd = [self.compositor, "-i", str(image_path), "-m", mode] + self.args
             cmd = ["systemd-run", "--user", "--scope", "--"] + compositor_cmd
             logger.info(f"Starting: {' '.join(compositor_cmd)}")
@@ -42,9 +38,11 @@ class CompositorManager:
                 stderr=subprocess.DEVNULL
             )
 
-            # 4. Wait for compositor to appear
-            if not self._wait_for_startup(timeout=1.0):
-                raise RuntimeError("Compositor failed to start")
+            # 3. Wait for new compositor to start
+            time.sleep(0.2)  # Brief pause to let new compositor initialize
+
+            # 4. Kill only the old compositor instances
+            self._kill_pids(old_pids)
 
             logger.info("Compositor started successfully")
             return True
@@ -53,6 +51,17 @@ class CompositorManager:
             logger.error(f"Failed to set wallpaper: {e}")
             return False
 
+    def _get_existing_pids(self) -> set:
+        """Get PIDs of existing compositor processes."""
+        pids = set()
+        for proc in psutil.process_iter(['name', 'pid']):
+            try:
+                if proc.info['name'] == self.compositor:
+                    pids.add(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        return pids
+
     def _kill_existing(self):
         """Kill existing compositor processes gracefully."""
         for proc in psutil.process_iter(['name', 'cmdline']):
@@ -60,6 +69,14 @@ class CompositorManager:
                 if proc.info['name'] == self.compositor:
                     logger.debug(f"Killing {self.compositor} (PID: {proc.pid})")
                     proc.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+    def _kill_pids(self, pids: set):
+        """Kill specific processes by PID."""
+        for pid in pids:
+            try:
+                psutil.Process(pid).terminate()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
 
