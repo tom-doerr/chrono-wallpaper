@@ -23,6 +23,10 @@ class CompositorManager:
     def set_wallpaper(self, image_path: Path, mode: str = "fill") -> bool:
         """Set wallpaper and ensure compositor is running."""
         try:
+            # Check if swww-daemon is running - if so, use swww instead
+            if self._is_swww_running():
+                return self._set_wallpaper_swww(image_path)
+
             # 1. Get existing PIDs
             old_pids = self._get_existing_pids()
 
@@ -120,3 +124,31 @@ class CompositorManager:
             time.sleep(0.05)
 
         return self.process.poll() is None
+
+    def _is_swww_running(self) -> bool:
+        """Check if swww-daemon is running."""
+        for proc in psutil.process_iter(['name']):
+            try:
+                if proc.info['name'] == 'swww-daemon':
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        return False
+
+    def _set_wallpaper_swww(self, image_path: Path) -> bool:
+        """Set wallpaper using swww (smooth transitions, no restart needed)."""
+        try:
+            cmd = ["swww", "img", str(image_path),
+                   "--transition-type", "fade",
+                   "--transition-duration", "0.5"]
+            result = subprocess.run(cmd, capture_output=True, timeout=5)
+
+            if result.returncode == 0:
+                logger.info(f"Wallpaper set via swww: {image_path}")
+                return True
+            else:
+                logger.error(f"swww failed: {result.stderr.decode()}")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to set wallpaper via swww: {e}")
+            return False
