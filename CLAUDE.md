@@ -20,6 +20,7 @@ This ensures swaybg survives after the Python script exits.
 - `--scope`: Creates a transient systemd scope, not a full service
 - Popen (not run): Don't wait for swaybg to complete (it runs forever)
 - DEVNULL: Prevents pipe blocking issues
+- **Start before kill**: New compositor starts first to prevent black flash
 
 ## Systemd Timer Configuration
 
@@ -95,6 +96,10 @@ systemctl --user restart chrono-wallpaper.timer
 **Cause**: Hash check detects no change (blend factor not changing enough)
 
 **Solution**: Check blend factor with `chrono-wallpaper run`, verify current time is in transition period
+
+### Black Flash During Updates
+
+**Fixed in v1.0.1** - New compositor starts before old one is killed to prevent brief black screen.
 
 ## Project Structure
 
@@ -202,6 +207,10 @@ Potential enhancements:
 5. Support for other compositors (swww, hyprpaper)
 
 ## Version History
+
+**v1.0.1** (2025-12-29):
+- Fixed black flash during wallpaper updates
+- New compositor now starts before killing old one
 
 **v1.0.0** (2025-12-29):
 - Initial release
